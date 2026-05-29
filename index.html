@@ -545,6 +545,39 @@ td {
 }
 .ring-label { text-anchor: middle; dominant-baseline: middle; }
 
+/* ── Tabs ── */
+.tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  border: 1px solid var(--border-bright);
+  background: transparent;
+  color: var(--muted2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab-btn:hover { background: rgba(255,255,255,.05); color: var(--text); }
+.tab-btn.active { background: var(--gold-dim); color: var(--gold); border-color: var(--gold-mid); font-weight: 500; }
+.tab-count {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.08);
+  color: var(--muted);
+}
+.tab-btn.active .tab-count { background: var(--gold-mid); color: var(--gold); }
+
 /* ── Visit button ── */
 .visit-btn {
   display: inline-flex;
@@ -729,7 +762,14 @@ tbody tr:hover .visit-btn { opacity: 1; }
     </div>
 
     <!-- Table -->
-    <div class="section-title">Registro completo de dominios</div>
+    <div class="tabs-row">
+      <button class="tab-btn active" id="tabPrincipales" onclick="switchTab('principales')">
+        ⭐ Principales <span class="tab-count" id="cntPrincipales">6</span>
+      </button>
+      <button class="tab-btn" id="tabTodos" onclick="switchTab('todos')">
+        ≡ Todos los dominios <span class="tab-count" id="cntTodos">32</span>
+      </button>
+    </div>
     <div class="filter-bar" style="animation-delay:.5s">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
@@ -790,6 +830,16 @@ let sortCol = 'expires';
 let sortDir = 1;
 let filtered = [];
 let activeAgencyFilter = '';
+let activeTab = 'principales';
+
+const PRINCIPALES = [
+  'aldeahudson.com',
+  'dypsa.com',
+  'wenelen.com.ar',
+  'wenelenrentals.com',
+  'aluenbp.com.ar',
+  'sanjustoshopping.com.ar'
+];
 
 const RAW = [
   ['urbanacentroscomerciales.com','5/16/2025','5/16/2026','eamiel@gmail.com','',''],
@@ -995,6 +1045,7 @@ function applyFilters() {
   const statusF = document.getElementById('selStatus').value;
 
   filtered = domains.filter(d => {
+    if (activeTab === 'principales' && !PRINCIPALES.includes(d.domain)) return false;
     if (q && !d.domain.toLowerCase().includes(q) && !d.owner.toLowerCase().includes(q) && !d.agency.toLowerCase().includes(q)) return false;
     if (owner && d.owner !== owner) return false;
     if (agency && d.agency !== agency) return false;
@@ -1077,6 +1128,21 @@ function renderPagination() {
   }
 }
 
+window.switchTab = function(tab) {
+  activeTab = tab;
+  document.getElementById('tabPrincipales').classList.toggle('active', tab === 'principales');
+  document.getElementById('tabTodos').classList.toggle('active', tab === 'todos');
+  // reset nav sidebar active
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  activeAgencyFilter = '';
+  document.getElementById('selExp').value = '';
+  document.getElementById('searchBox').value = '';
+  document.getElementById('selOwner').value = '';
+  document.getElementById('selStatus').value = '';
+  document.getElementById('selAgency').value = '';
+  applyFilters();
+};
+
 window.prevPage = () => { if (page > 0) { page--; renderTable(); } };
 window.nextPage = () => { if ((page+1)*PER_PAGE < filtered.length) { page++; renderTable(); } };
 window.sortBy = col => {
@@ -1129,6 +1195,10 @@ buildBars('agencyBars','agency');
 buildBars('ownerBars','owner');
 buildTimeline();
 populateFilters();
+// set tab counts
+document.getElementById('cntPrincipales').textContent = PRINCIPALES.length;
+document.getElementById('cntTodos').textContent = domains.length;
+activeTab = 'principales';
 applyFilters();
 </script>
 </body>
