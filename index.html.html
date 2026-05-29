@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DYPSA — Panel de Dominios</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #111827;
+  --card: #1a2236;
+  --card-hover: #1f2a42;
+  --border: rgba(255,255,255,0.07);
+  --border-bright: rgba(255,255,255,0.14);
+  --gold: #f0a500;
+  --gold-dim: rgba(240,165,0,0.12);
+  --gold-mid: rgba(240,165,0,0.3);
+  --text: #e8edf5;
+  --muted: #6b7a99;
+  --muted2: #8892aa;
+  --danger: #e05252;
+  --danger-bg: rgba(224,82,82,0.1);
+  --warn: #e09400;
+  --warn-bg: rgba(224,148,0,0.1);
+  --ok: #3dba7e;
+  --ok-bg: rgba(61,186,126,0.1);
+  --blue: #4a9eff;
+  --blue-bg: rgba(74,158,255,0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: .4;
+}
+
+/* ── Layout ── */
+.layout { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 230px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  top: 0; left: 0;
+  z-index: 100;
+  transition: transform .3s ease;
+}
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -.5px;
+  color: var(--gold);
+}
+.logo-sub {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  margin-top: 2px;
+}
+.nav { padding: 16px 12px; flex: 1; }
+.nav-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+  padding: 0 12px;
+  margin: 8px 0 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted2);
+  font-size: 13px;
+  font-weight: 400;
+  transition: all .15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.nav-item.active { background: var(--gold-dim); color: var(--gold); font-weight: 500; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 6px; box-shadow: 0 0 6px var(--ok); }
+
+/* ── Main ── */
+.main {
+  margin-left: 230px;
+  flex: 1;
+  padding: 0 36px 60px;
+  max-width: 1200px;
+}
+
+/* ── Header ── */
+.page-header {
+  padding: 36px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.page-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -.5px;
+  color: var(--text);
+}
+.page-subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.header-date {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+.header-date strong { display: block; color: var(--text); font-size: 13px; font-weight: 500; }
+
+/* ── Section titles ── */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+/* ── KPI Cards ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s, background .2s;
+  cursor: default;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 14px 14px 0 0;
+}
+.kpi-card.gold::before { background: var(--gold); }
+.kpi-card.danger::before { background: var(--danger); }
+.kpi-card.warn::before { background: var(--warn); }
+.kpi-card.ok::before { background: var(--ok); }
+.kpi-card.blue::before { background: var(--blue); }
+.kpi-card:hover { border-color: var(--border-bright); background: var(--card-hover); }
+.kpi-icon {
+  font-size: 22px;
+  margin-bottom: 12px;
+  display: block;
+}
+.kpi-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.kpi-card.gold .kpi-val { color: var(--gold); }
+.kpi-card.danger .kpi-val { color: var(--danger); }
+.kpi-card.warn .kpi-val { color: var(--warn); }
+.kpi-card.ok .kpi-val { color: var(--ok); }
+.kpi-card.blue .kpi-val { color: var(--blue); }
+.kpi-label { font-size: 12px; color: var(--muted); font-weight: 400; }
+.kpi-trend { font-size: 11px; margin-top: 8px; color: var(--muted); }
+
+/* ── Charts row ── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1.2fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+}
+.chart-card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted2);
+  letter-spacing: .04em;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chart-card-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 14px;
+  background: var(--gold);
+  border-radius: 2px;
+}
+
+/* ── Bar chart custom ── */
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.bar-name {
+  font-size: 12px;
+  color: var(--muted2);
+  min-width: 100px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+.bar-num {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 22px;
+  text-align: right;
+}
+
+/* ── Timeline ── */
+.timeline-section { margin-bottom: 32px; }
+.timeline-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+}
+.timeline-track {
+  position: relative;
+  height: 60px;
+  margin: 8px 0;
+}
+.tl-line {
+  position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 2px;
+  background: var(--border-bright);
+  transform: translateY(-50%);
+  border-radius: 1px;
+}
+.tl-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  z-index: 2;
+}
+.tl-dot:hover { transform: translate(-50%, -50%) scale(2); z-index: 10; }
+.tl-year-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .04em;
+  margin-top: 4px;
+}
+.tl-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--muted2);
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  transition: opacity .15s;
+}
+.tl-tooltip strong { color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; }
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.search-wrap {
+  flex: 1;
+  min-width: 220px;
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 15px;
+  pointer-events: none;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 9px 12px 9px 36px;
+  outline: none;
+  transition: border-color .15s;
+}
+.search-wrap input::placeholder { color: var(--muted); }
+.search-wrap input:focus { border-color: var(--gold-mid); }
+select.filter-sel {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  color: var(--muted2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 9px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+select.filter-sel:focus { border-color: var(--gold-mid); color: var(--text); }
+.filter-count {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* ── Table ── */
+.table-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead th {
+  background: var(--surface);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s;
+}
+thead th:hover { color: var(--gold); }
+thead th.sorted { color: var(--gold); }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.025); }
+td {
+  padding: 13px 16px;
+  vertical-align: middle;
+  font-size: 13px;
+}
+.domain-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.domain-favicon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #1d2a45, #2a3a5c);
+  border: 1px solid var(--border-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted2);
+  font-family: 'DM Mono', monospace;
+  flex-shrink: 0;
+}
+.domain-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+}
+.domain-ext { color: var(--muted); font-weight: 400; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.badge-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(224,82,82,.2); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(224,148,0,.2); }
+.badge-ok { background: var(--ok-bg); color: var(--ok); border: 1px solid rgba(61,186,126,.2); }
+.badge-neutral { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+.badge-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(74,158,255,.2); }
+.badge-gold { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-mid); }
+.pulse { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.pulse.red { background: var(--danger); box-shadow: 0 0 0 3px rgba(224,82,82,.15); }
+.pulse.amber { background: var(--warn); box-shadow: 0 0 0 3px rgba(224,148,0,.15); }
+.pulse.green { background: var(--ok); box-shadow: 0 0 0 3px rgba(61,186,126,.15); }
+.agency-tag {
+  font-size: 11px;
+  color: var(--muted2);
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.page-btn {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 7px;
+  color: var(--muted2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.page-btn:hover:not(:disabled) { background: var(--card-hover); color: var(--text); border-color: var(--gold-mid); }
+.page-btn:disabled { opacity: .35; cursor: default; }
+.page-info { font-size: 12px; color: var(--muted); margin: 0 auto; }
+.page-num {
+  font-size: 12px;
+  width: 28px; height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--muted2);
+  border: 1px solid transparent;
+  transition: all .15s;
+}
+.page-num.active { background: var(--gold-dim); color: var(--gold); border-color: var(--gold-mid); font-weight: 600; }
+.page-num:hover:not(.active) { background: rgba(255,255,255,.05); color: var(--text); }
+
+/* ── Progress ring ── */
+.ring-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0;
+}
+.ring-label { text-anchor: middle; dominant-baseline: middle; }
+
+/* ── Expiry progress bar ── */
+.exp-bar-outer {
+  width: 70px;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.exp-bar-fill { height: 100%; border-radius: 2px; }
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.kpi-card, .chart-card, .timeline-card, .filter-bar, .table-card {
+  animation: fadeUp .4s ease both;
+}
+.kpi-card:nth-child(1) { animation-delay: .05s }
+.kpi-card:nth-child(2) { animation-delay: .10s }
+.kpi-card:nth-child(3) { animation-delay: .15s }
+.kpi-card:nth-child(4) { animation-delay: .20s }
+.kpi-card:nth-child(5) { animation-delay: .25s }
+
+/* ── Hamburger ── */
+.menu-toggle {
+  display: none;
+  position: fixed;
+  top: 14px; left: 14px;
+  z-index: 200;
+  background: var(--card);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 90;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .charts-row { grid-template-columns: 1fr 1fr; }
+  .charts-row .chart-card:first-child { grid-column: 1/-1; }
+}
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .main { padding: 0 20px 60px; }
+  .charts-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .menu-toggle { display: block; }
+  .main { margin-left: 0; padding: 0 16px 60px; padding-top: 60px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle">☰</button>
+<div class="sidebar-overlay" id="overlay"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">DYPSA</div>
+      <div class="logo-sub">Panel de Dominios</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">Vistas</div>
+      <button class="nav-item active" onclick="showSection('overview')">
+        <span class="nav-icon">⬡</span> Resumen general
+      </button>
+      <button class="nav-item" onclick="showSection('table')">
+        <span class="nav-icon">≡</span> Todos los dominios
+      </button>
+      <button class="nav-item" onclick="showSection('critical')">
+        <span class="nav-icon">⚠</span> Críticos
+      </button>
+      <div class="nav-label" style="margin-top:12px">Agencias</div>
+      <button class="nav-item" onclick="filterByAgency('nic.ar')">
+        <span class="nav-icon">◈</span> NIC.ar
+      </button>
+      <button class="nav-item" onclick="filterByAgency('go daddy')">
+        <span class="nav-icon">◈</span> GoDaddy
+      </button>
+      <button class="nav-item" onclick="filterByAgency('network solutions')">
+        <span class="nav-icon">◈</span> Network Solutions
+      </button>
+      <button class="nav-item" onclick="filterByAgency('enom')">
+        <span class="nav-icon">◈</span> Enom
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot"></span>Datos al 29 may 2026
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Panel de Dominios</div>
+        <div class="page-subtitle">Gestión y seguimiento de vencimientos corporativos</div>
+      </div>
+      <div class="header-date">
+        <strong id="dateDisplay"></strong>
+        Fecha de referencia
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="section-title">Indicadores clave</div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Charts -->
+    <div class="section-title">Distribución</div>
+    <div class="charts-row">
+      <div class="chart-card" style="animation-delay:.3s">
+        <div class="chart-card-title">Vencimientos por año</div>
+        <div style="position:relative;height:160px">
+          <canvas id="chartYear" role="img" aria-label="Vencimientos por año"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" style="animation-delay:.35s">
+        <div class="chart-card-title">Por agencia registradora</div>
+        <div id="agencyBars"></div>
+      </div>
+      <div class="chart-card" style="animation-delay:.4s">
+        <div class="chart-card-title">Por propietario</div>
+        <div id="ownerBars"></div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="section-title timeline-section">Línea de tiempo de vencimientos</div>
+    <div class="timeline-card" style="animation-delay:.45s;margin-bottom:32px">
+      <div class="chart-card-title">Todos los dominios — pasá el cursor sobre cada punto</div>
+      <div class="timeline-track" id="tlTrack">
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-year-labels" id="tlYears"></div>
+      <div class="tl-tooltip" id="tlTip">
+        <span style="color:var(--muted)">Posicioná el cursor sobre un punto para ver el detalle del dominio</span>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="section-title">Registro completo de dominios</div>
+    <div class="filter-bar" style="animation-delay:.5s">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchBox" placeholder="Buscar dominio, propietario, agencia…" oninput="applyFilters()">
+      </div>
+      <select class="filter-sel" id="selOwner" onchange="applyFilters()">
+        <option value="">Todos los propietarios</option>
+      </select>
+      <select class="filter-sel" id="selAgency" onchange="applyFilters()">
+        <option value="">Todas las agencias</option>
+      </select>
+      <select class="filter-sel" id="selExp" onchange="applyFilters()">
+        <option value="">Todos los vencimientos</option>
+        <option value="90">Críticos ≤ 90 días</option>
+        <option value="180">Próximos ≤ 180 días</option>
+        <option value="365">Este año</option>
+        <option value="ok">Más de un año</option>
+      </select>
+      <select class="filter-sel" id="selStatus" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="chequeado">Chequeado</option>
+        <option value="pendiente">Sin verificar</option>
+      </select>
+      <span class="filter-count" id="filterCount"></span>
+    </div>
+
+    <div class="table-card" style="animation-delay:.55s">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortBy('domain')">Dominio</th>
+              <th onclick="sortBy('expires')" class="sorted">Vencimiento ↕</th>
+              <th onclick="sortBy('days')">Días restantes</th>
+              <th onclick="sortBy('owner')">Propietario</th>
+              <th onclick="sortBy('agency')">Agencia</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button class="page-btn" id="prevBtn" onclick="prevPage()">← Anterior</button>
+        <div id="pageNums"></div>
+        <button class="page-btn" id="nextBtn" onclick="nextPage()">Siguiente →</button>
+        <span class="page-info" id="pageInfo"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const TODAY = new Date('2026-05-29');
+const PER_PAGE = 12;
+let page = 0;
+let sortCol = 'expires';
+let sortDir = 1;
+let filtered = [];
+let activeAgencyFilter = '';
+
+const RAW = [
+  ['urbanacentroscomerciales.com','5/16/2025','5/16/2026','eamiel@gmail.com','',''],
+  ['dypsainternational.com','5/29/2006','5/29/2026','eamiel@gmail.com','enom','chequeado'],
+  ['wenelensuites.com.ar','5/31/2025','5/31/2026','Eurofin','nic.ar','chequeado'],
+  ['dypsa.ar','6/4/2025','6/4/2026','Eurofin','nic.ar','chequeado'],
+  ['dypsagroup.ar','6/4/2025','6/4/2026','Eurofin','nic.ar','chequeado'],
+  ['dypsainternational.com.ar','7/29/2022','7/29/2026','Eurofin','nic.ar','chequeado'],
+  ['wenelen.com.ar','8/8/2023','8/8/2026','Eurofin','nic.ar','chequeado'],
+  ['dypsagroup.com.ar','8/29/2023','8/29/2026','Eurofin','nic.ar','chequeado'],
+  ['wenelenapartments.com.ar','12/5/2024','12/5/2026','Adminver','nic.ar','chequeado'],
+  ['hotelwenelen.com.ar','12/14/2023','12/14/2026','Eurofin','nic.ar','chequeado'],
+  ['continentalurbana.com','12/23/2016','12/23/2026','no identificable','enom','chequeado'],
+  ['aldeahudson.com.ar','2/6/2026','2/6/2027','Eurofin','nic.ar','chequeado'],
+  ['aldeahudson.com','2/6/2026','2/6/2027','Eurofin','go daddy','chequeado'],
+  ['roxonconsult.com','2/16/2012','2/16/2027','eamiel@gmail.com','',''],
+  ['roxonconsult.net','2/16/2012','2/16/2027','eamiel@gmail.com','',''],
+  ['eurofin.com.ar','3/14/2025','3/14/2027','Eurofin','nic.ar','chequeado'],
+  ['eurofinsa.com.ar','3/14/2025','3/14/2027','Eurofin','nic.ar','chequeado'],
+  ['wenelenrentals.com.ar','3/22/2025','3/22/2027','Adminver','nic.ar','chequeado'],
+  ['wenelensuites.com','4/15/2025','4/15/2027','no identificable','go daddy',''],
+  ['aluenbp.com.ar','12/21/2016','4/21/2027','Eurofin','nic.ar','chequeado'],
+  ['continentalurbana.com.ar','11/22/2007','4/22/2027','Eurofin','nic.ar','chequeado'],
+  ['dypsa.com.ar','5/31/2019','4/30/2027','Eurofin','nic.ar','chequeado'],
+  ['sanjustoshopping.com.ar','8/4/2009','5/4/2027','Eurofin','nic.ar','chequeado'],
+  ['roxonconsult.info','6/20/2016','6/20/2027','eamiel@gmail.com','',''],
+  ['dypsa.com','9/2/2005','9/2/2027','IK','go daddy','chequeado'],
+  ['wenelenapartments.com','12/5/2024','12/5/2027','Adminver','go daddy','chequeado'],
+  ['wenelenrentals.com','3/21/2025','3/21/2028','Adminver','go daddy','chequeado'],
+  ['hotelwenelen.com','8/10/2025','8/10/2030','eamiel@gmail.com','network solutions',''],
+  ['wenelen.com','8/10/2023','8/10/2030','eamiel@gmail.com','network solutions','chequeado'],
+  ['dypsagroup.com','8/30/2023','8/30/2030','eamiel@gmail.com','network solutions','chequeado'],
+  ['sanjustoshopping.com','2/10/2014','2/10/2035','eamiel@gmail.com','network solutions','chequeado'],
+  ['aluenbp.com','3/14/2025','3/14/2035','no identificable','go daddy',''],
+];
+
+const domains = RAW.map(r => {
+  const exp = new Date(r[2]);
+  const days = Math.round((exp - TODAY) / 86400000);
+  const [base, ...extParts] = r[0].split('.');
+  return {
+    domain: r[0], domainBase: base, domainExt: '.'+extParts.join('.'),
+    registered: r[1], expires: r[2], expDate: exp, days,
+    owner: r[3], agency: r[4] || '—', status: r[5]
+  };
+});
+
+function urgency(d) {
+  if (d <= 90) return 'danger';
+  if (d <= 180) return 'warn';
+  return 'ok';
+}
+function urgencyColor(d) {
+  if (d <= 90) return 'var(--danger)';
+  if (d <= 180) return 'var(--warn)';
+  return 'var(--ok)';
+}
+function urgencyLabel(d) {
+  if (d <= 90) return 'Crítico';
+  if (d <= 180) return 'Próximo';
+  return 'Vigente';
+}
+function urgencyPulse(d) {
+  if (d <= 90) return 'red';
+  if (d <= 180) return 'amber';
+  return 'green';
+}
+
+// ── Date display ──
+document.getElementById('dateDisplay').textContent =
+  TODAY.toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
+
+// ── KPIs ──
+function buildKPIs() {
+  const critical = domains.filter(d => d.days <= 90).length;
+  const upcoming = domains.filter(d => d.days > 90 && d.days <= 180).length;
+  const checked = domains.filter(d => d.status === 'chequeado').length;
+  const pct = Math.round(checked / domains.length * 100);
+  const data = [
+    { icon:'🌐', val: domains.length, label:'Total dominios', sub:'registrados', cls:'gold' },
+    { icon:'🚨', val: critical, label:'Críticos', sub:'vencen en 90 días', cls:'danger' },
+    { icon:'⏳', val: upcoming, label:'Próximos', sub:'vencen en 180 días', cls:'warn' },
+    { icon:'✓', val: checked, label:'Chequeados', sub:`${pct}% del total`, cls:'ok' },
+    { icon:'◎', val: domains.length - checked, label:'Sin verificar', sub:'requieren revisión', cls:'blue' },
+  ];
+  document.getElementById('kpiGrid').innerHTML = data.map(k =>
+    `<div class="kpi-card ${k.cls}">
+      <span class="kpi-icon">${k.icon}</span>
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-trend">${k.sub}</div>
+    </div>`
+  ).join('');
+}
+
+// ── Year chart ──
+function buildYearChart() {
+  const counts = {};
+  domains.forEach(d => {
+    const y = d.expDate.getFullYear();
+    counts[y] = (counts[y]||0)+1;
+  });
+  const years = Object.keys(counts).sort();
+  const vals = years.map(y => counts[y]);
+  const colors = years.map(y => {
+    const y2 = parseInt(y);
+    if (y2 <= 2026) return 'rgba(224,82,82,.75)';
+    if (y2 <= 2027) return 'rgba(240,165,0,.65)';
+    return 'rgba(61,186,126,.6)';
+  });
+  new Chart(document.getElementById('chartYear'), {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [{
+        label: 'Dominios',
+        data: vals,
+        backgroundColor: colors,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: ctx => ` ${ctx.parsed.y} dominio${ctx.parsed.y!==1?'s':''}`
+      }}},
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#6b7a99', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 }, border: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Bar charts ──
+function buildBars(id, field) {
+  const counts = {};
+  domains.forEach(d => { const v = d[field]; counts[v] = (counts[v]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const max = sorted[0][1];
+  const colors = ['#f0a500','#4a9eff','#3dba7e','#e05252','#a78bfa','#fb923c'];
+  document.getElementById(id).innerHTML = sorted.map(([k,v], i) =>
+    `<div class="bar-item">
+      <div class="bar-name" title="${k}">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/max*100)}%;background:${colors[i%colors.length]}"></div></div>
+      <div class="bar-num">${v}</div>
+    </div>`
+  ).join('');
+}
+
+// ── Timeline ──
+function buildTimeline() {
+  const sorted = [...domains].sort((a,b) => a.expDate - b.expDate);
+  const minT = sorted[0].expDate.getTime();
+  const maxT = sorted[sorted.length-1].expDate.getTime();
+  const range = maxT - minT;
+  const track = document.getElementById('tlTrack');
+  sorted.forEach(d => {
+    const pct = (d.expDate.getTime() - minT) / range * 100;
+    const dot = document.createElement('div');
+    dot.className = 'tl-dot';
+    dot.style.cssText = `left:${pct.toFixed(2)}%;background:${urgencyColor(d.days)};`;
+    dot.title = d.domain;
+    dot.addEventListener('mouseenter', () => {
+      document.getElementById('tlTip').innerHTML = `
+        <span class="pulse ${urgencyPulse(d.days)}"></span>
+        <strong>${d.domain}</strong>
+        <span style="color:var(--muted)">vence</span>
+        <span style="color:var(--text)">${d.expires}</span>
+        <span class="badge badge-${urgency(d.days) === 'ok' ? 'ok' : urgency(d.days) === 'warn' ? 'warn' : 'danger'}" style="margin-left:4px">${d.days} días</span>
+        <span class="agency-tag" style="margin-left:auto">${d.agency}</span>
+      `;
+    });
+    dot.addEventListener('mouseleave', () => {
+      document.getElementById('tlTip').innerHTML =
+        '<span style="color:var(--muted)">Posicioná el cursor sobre un punto para ver el detalle</span>';
+    });
+    track.appendChild(dot);
+  });
+  const startY = new Date(minT).getFullYear();
+  const endY = new Date(maxT).getFullYear();
+  const midY = Math.round((startY + endY) / 2);
+  document.getElementById('tlYears').innerHTML =
+    `<span>${startY}</span><span>${midY - 2}</span><span>${midY + 1}</span><span>${endY}</span>`;
+}
+
+// ── Filters ──
+function populateFilters() {
+  const owners = [...new Set(domains.map(d=>d.owner))].sort();
+  const agencies = [...new Set(domains.map(d=>d.agency))].sort();
+  const so = document.getElementById('selOwner');
+  owners.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; so.appendChild(opt); });
+  const sa = document.getElementById('selAgency');
+  agencies.forEach(a => { const opt = document.createElement('option'); opt.value = a; opt.textContent = a; sa.appendChild(opt); });
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchBox').value.toLowerCase().trim();
+  const owner = document.getElementById('selOwner').value;
+  const agency = document.getElementById('selAgency').value || activeAgencyFilter;
+  const expF = document.getElementById('selExp').value;
+  const statusF = document.getElementById('selStatus').value;
+
+  filtered = domains.filter(d => {
+    if (q && !d.domain.toLowerCase().includes(q) && !d.owner.toLowerCase().includes(q) && !d.agency.toLowerCase().includes(q)) return false;
+    if (owner && d.owner !== owner) return false;
+    if (agency && d.agency !== agency) return false;
+    if (expF === '90' && d.days > 90) return false;
+    if (expF === '180' && (d.days <= 90 || d.days > 180)) return false;
+    if (expF === '365' && (d.days <= 180 || d.days > 365)) return false;
+    if (expF === 'ok' && d.days <= 365) return false;
+    if (statusF === 'chequeado' && d.status !== 'chequeado') return false;
+    if (statusF === 'pendiente' && d.status === 'chequeado') return false;
+    return true;
+  });
+
+  filtered.sort((a,b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (sortCol === 'expires' || sortCol === 'days') { av = a.days; bv = b.days; }
+    if (typeof av === 'string') av = av.toLowerCase();
+    if (typeof bv === 'string') bv = bv.toLowerCase();
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+
+  document.getElementById('filterCount').textContent = `${filtered.length} dominio${filtered.length!==1?'s':''}`;
+  page = 0;
+  renderTable();
+}
+
+function renderTable() {
+  const start = page * PER_PAGE;
+  const slice = filtered.slice(start, start + PER_PAGE);
+  const body = document.getElementById('tableBody');
+  body.innerHTML = slice.map(d => {
+    const urg = urgency(d.days);
+    const badgeCls = urg === 'danger' ? 'badge-danger' : urg === 'warn' ? 'badge-warn' : 'badge-ok';
+    const clr = urgencyColor(d.days);
+    const abbr = (d.domainBase||'?').slice(0,2).toUpperCase();
+    const pct = Math.min(100, Math.round(Math.max(0, d.days) / 365 * 100));
+    const statusBadge = d.status === 'chequeado'
+      ? `<span class="badge badge-gold">✓ chequeado</span>`
+      : `<span class="badge badge-neutral">pendiente</span>`;
+    const agTag = d.agency !== '—' ? `<span class="agency-tag">${d.agency}</span>` : '<span style="color:var(--muted);font-size:12px">—</span>';
+    return `<tr>
+      <td>
+        <div class="domain-cell">
+          <div class="domain-favicon">${abbr}</div>
+          <span class="domain-name">${d.domainBase}<span class="domain-ext">${d.domainExt}</span></span>
+        </div>
+      </td>
+      <td style="font-size:12px;color:var(--muted2);white-space:nowrap">${d.expires}</td>
+      <td>
+        <span class="badge ${badgeCls}">
+          <span class="pulse ${urgencyPulse(d.days)}"></span>
+          ${d.days} días
+        </span>
+        <span class="exp-bar-outer"><div class="exp-bar-fill" style="width:${pct}%;background:${clr}"></div></span>
+      </td>
+      <td style="font-size:12px;color:var(--muted2)">${d.owner}</td>
+      <td>${agTag}</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  document.getElementById('prevBtn').disabled = page === 0;
+  document.getElementById('nextBtn').disabled = page >= pages - 1;
+  document.getElementById('pageInfo').textContent = `${page*PER_PAGE+1}–${Math.min((page+1)*PER_PAGE, total)} de ${total}`;
+  const nums = document.getElementById('pageNums');
+  nums.innerHTML = '';
+  const start = Math.max(0, page - 2);
+  const end = Math.min(pages - 1, page + 2);
+  for (let i = start; i <= end; i++) {
+    const span = document.createElement('span');
+    span.className = 'page-num' + (i === page ? ' active' : '');
+    span.textContent = i + 1;
+    span.onclick = () => { page = i; renderTable(); };
+    nums.appendChild(span);
+  }
+}
+
+window.prevPage = () => { if (page > 0) { page--; renderTable(); } };
+window.nextPage = () => { if ((page+1)*PER_PAGE < filtered.length) { page++; renderTable(); } };
+window.sortBy = col => {
+  sortDir = sortCol === col ? -sortDir : 1;
+  sortCol = col;
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+  applyFilters();
+};
+
+// ── Nav helpers ──
+window.showSection = function(sec) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  event.target.closest('.nav-item').classList.add('active');
+  activeAgencyFilter = '';
+  document.getElementById('selAgency').value = '';
+  document.getElementById('selExp').value = sec === 'critical' ? '90' : '';
+  document.getElementById('searchBox').value = '';
+  document.getElementById('selOwner').value = '';
+  document.getElementById('selStatus').value = '';
+  applyFilters();
+  document.querySelector('.table-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+window.filterByAgency = function(ag) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  event.target.closest('.nav-item').classList.add('active');
+  activeAgencyFilter = ag;
+  document.getElementById('selAgency').value = '';
+  document.getElementById('selExp').value = '';
+  document.getElementById('searchBox').value = '';
+  document.getElementById('selOwner').value = '';
+  document.getElementById('selStatus').value = '';
+  applyFilters();
+  document.querySelector('.table-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ── Sidebar mobile ──
+document.getElementById('menuToggle').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+};
+document.getElementById('overlay').onclick = () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+};
+
+// ── Init ──
+buildKPIs();
+buildYearChart();
+buildBars('agencyBars','agency');
+buildBars('ownerBars','owner');
+buildTimeline();
+populateFilters();
+applyFilters();
+</script>
+</body>
+</html>
