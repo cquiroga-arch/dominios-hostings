@@ -545,6 +545,26 @@ td {
 }
 .ring-label { text-anchor: middle; dominant-baseline: middle; }
 
+/* ── Visit button ── */
+.visit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-bright);
+  color: var(--muted2);
+  font-size: 13px;
+  text-decoration: none;
+  flex-shrink: 0;
+  margin-left: 4px;
+  transition: background .15s, color .15s, border-color .15s;
+  opacity: 0;
+}
+tbody tr:hover .visit-btn { opacity: 1; }
+.visit-btn:hover { background: var(--gold-dim); color: var(--gold); border-color: var(--gold-mid); }
+
 /* ── Expiry progress bar ── */
 .exp-bar-outer {
   width: 70px;
@@ -1019,6 +1039,7 @@ function renderTable() {
         <div class="domain-cell">
           <div class="domain-favicon">${abbr}</div>
           <span class="domain-name">${d.domainBase}<span class="domain-ext">${d.domainExt}</span></span>
+          <a href="https://${d.domain}" target="_blank" rel="noopener noreferrer" class="visit-btn" title="Abrir ${d.domain}">↗</a>
         </div>
       </td>
       <td style="font-size:12px;color:var(--muted2);white-space:nowrap">${d.expires}</td>
